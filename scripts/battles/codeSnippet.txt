@@ -1,0 +1,40 @@
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX dbp: <http://dbpedia.org/property/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT 
+  ?conflictName 
+  (SAMPLE(?dateVal) AS ?date)
+  (SAMPLE(?territoryVal) AS ?territoryChange)
+  (SAMPLE(?resultVal) AS ?result)
+  (SAMPLE(?latVal) AS ?lat)
+  (SAMPLE(?longVal) AS ?long)
+WHERE {
+  ?conflict a dbo:MilitaryConflict ;
+            rdfs:label ?conflictName ;
+            dbp:territory ?territoryVal ;
+            geo:lat ?latVal ;
+            geo:long ?longVal .
+
+  # Geographic boundary for Europe
+  FILTER(?latVal >= 35.0 && ?latVal <= 71.0 && ?longVal >= -10.0 && ?longVal <= 40.0)
+  FILTER(LANG(?conflictName) = "en")
+
+  # Territorial change field must be in English or untyped literal
+  FILTER(LANG(?territoryVal) = "en" || LANG(?territoryVal) = "")
+
+  # Date retrieval & filter (1800 to 2026)
+  OPTIONAL { ?conflict dbo:date ?dateVal . }
+  OPTIONAL { ?conflict dbp:date ?dateVal . }
+  FILTER(
+    BOUND(?dateVal) && 
+    STR(?dateVal) >= "1800" && 
+    STR(?dateVal) <= "2026-12-31"
+  )
+
+  OPTIONAL { ?conflict dbo:result ?resultVal . }
+}
+GROUP BY ?conflictName
+ORDER BY ?date
